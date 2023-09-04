@@ -86,10 +86,12 @@ public class Principal {
 			break;
 		case "5":
 			System.out.println("Eligio la opcion 5 -> Cargar nueva localidad");
+			controlLogic.cargarLocalidad();
 			System.out.println("");
 			break;
 		case "6":
 			System.out.println("Eligio la opcion 6 -> Cargar nuevo genero");
+			controlLogic.cargarGenero();
 			System.out.println("");
 			break; 
 		case "7":
@@ -99,6 +101,7 @@ public class Principal {
 			break;
 		case "8":
 			System.out.println("Eligió la opcion 8 -> Ver lista de generos");
+			controlLogic.mostrarGeneros();
 			System.out.println("");
 			break;
 		case "9":
@@ -108,6 +111,7 @@ public class Principal {
 			break;
 		case "10":
 			System.out.println("Eligio la opcion 10 -> Ver metadata de BD");
+			controlLogic.verMetadataBD();
 			System.out.println("");
 			break;
 		case "777":

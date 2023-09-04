@@ -29,6 +29,9 @@ public class Localidad {
 		System.out.println("CODIGO POSTAL:");
 		try {
 		this.codigo_postal=scanner.nextInt();
+		scanner.nextLine();
+		System.out.println("NOMBRE: ");
+		this.descripcion=scanner.nextLine();
 		}catch(Exception e) {
 			System.out.println("No ingreso el tipo de dato correcto!!!");
 		}

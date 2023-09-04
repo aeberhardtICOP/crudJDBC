@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
+import java.util.HashMap;
 
 public class ControladoraPersistencia {
 	private ControladoraLogica controlLogic;
@@ -83,8 +83,8 @@ public class ControladoraPersistencia {
 	//BUSCAR EN LOCALIDADES POR ID:
 	
 	//TRAER COLECCIONES
-	public ArrayList<Genero> traerGeneros() {
-		ArrayList<Genero>generos=new ArrayList();
+	public HashMap<Integer, Genero> traerGeneros() {
+		HashMap<Integer, Genero>generos=new HashMap();
 		try {
 			st=con.createStatement();
 			rs=st.executeQuery("SELECT id_genero, nombre, abreviatura FROM genero;");
@@ -92,15 +92,15 @@ public class ControladoraPersistencia {
 				int id_genero=rs.getInt("id_genero");
 				String nombre = rs.getString("nombre");
 				char abreviatura = rs.getString("abreviatura").charAt(0);
-				generos.add(new Genero(id_genero, nombre, abreviatura));
+				generos.put(id_genero, new Genero(id_genero, nombre, abreviatura));
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 		return generos;
 	}
-		public ArrayList<Localidad> traerLocalidades() {
-			ArrayList<Localidad>localidades = new ArrayList();
+		public HashMap<Integer, Localidad> traerLocalidades() {
+			HashMap<Integer, Localidad>localidades = new HashMap();
 			try {
 				st=con.createStatement();
 				rs=st.executeQuery("SELECT id_localidad, codigo_postal, descripcion FROM localidad;");
@@ -108,7 +108,7 @@ public class ControladoraPersistencia {
 					int id_localidad=rs.getInt("id_localidad");
 					int codigo_postal = rs.getInt("codigo_postal");
 					String descripcion = rs.getString("descripcion");
-					localidades.add(new Localidad(id_localidad, codigo_postal, descripcion));
+					localidades.put(id_localidad,new Localidad(id_localidad, codigo_postal, descripcion));
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -117,8 +117,8 @@ public class ControladoraPersistencia {
 	}
 		
 		//TRAER LISTA PERSONAS / DOMICILIOS
-			public ArrayList<Persona>  traerPersonas() {
-				ArrayList<Persona>personas = new ArrayList();
+			public HashMap<Integer, Persona>  traerPersonas() {
+				HashMap<Integer, Persona>personas = new HashMap();
 				try {
 					st =con.createStatement();
 					rs = st.executeQuery("SELECT p.id_persona, p.nombre AS nombrePersona, p.apellido,"
@@ -142,23 +142,23 @@ public class ControladoraPersistencia {
 						String descLocalidad = rs.getString("descripcion");
 						int codigo_postal = rs.getInt("codigo_postal");
 						Localidad loc;
-						if(controlLogic.buscarEnLocalidades(id_localidad)!=-1) {
+						if(controlLogic.localidadesContains(id_localidad)==true) {
 							loc = controlLogic.traerDeLocalidades(id_localidad);
 						}else {
 							loc = new Localidad(id_localidad,codigo_postal,descLocalidad);
-							controlLogic.agregarALocalidades(loc);
+							controlLogic.agregarALocalidades(loc, id_localidad);
 						}
 						Genero gen;
-						if(controlLogic.buscarEnGeneros(id_genero)!=-1) {
-							gen = controlLogic.traerDeGeneros(id_localidad);
+						if(controlLogic.generosContains(id_genero)==true) {
+							gen = controlLogic.traerDeGeneros(id_genero);
 						}else {
 							gen = new Genero(id_genero, nombreGen, abreviatura);
-							controlLogic.agregarAGeneros(gen);
+							controlLogic.agregarAGeneros(gen, id_genero);
 						}
 						Domicilio dom = new Domicilio(id_domicilio,calle,nro,loc);
 						//controlLogic.agregarADomicilios(dom);
 						Persona pers = new Persona(id_persona,nombre,apellido,gen,dom);
-						personas.add(pers);
+						personas.put(id_persona, pers);
 					}
 				} catch (SQLException e) {
 					System.out.println("ERROR AL CARGAR PERSONAS EN MEMORIA :(");
@@ -167,8 +167,8 @@ public class ControladoraPersistencia {
 			return personas;
 			}
 	//DOMICILIO
-			public ArrayList<Domicilio> traerDomicilios() {
-				ArrayList<Domicilio>domicilios = new ArrayList();
+			public HashMap<Integer,Domicilio> traerDomicilios() {
+				HashMap<Integer, Domicilio>domicilios = new HashMap();
 				try {
 					st =con.createStatement();
 					rs = st.executeQuery("SELECT d.id_domicilio, d.calle, d.numero, l.id_localidad, l.codigo_postal, l.descripcion "
@@ -181,14 +181,14 @@ public class ControladoraPersistencia {
 						String descLocalidad = rs.getString("descripcion");
 						int codigo_postal = rs.getInt("codigo_postal");
 						Localidad loc;
-						if(controlLogic.buscarEnLocalidades(id_localidad)!=-1) {
+						if(controlLogic.localidadesContains(id_localidad)==true) {
 							loc = controlLogic.traerDeLocalidades(id_localidad);
 						}else {
 							loc = new Localidad(id_localidad,codigo_postal,descLocalidad);
-							controlLogic.agregarALocalidades(loc);
+							controlLogic.agregarALocalidades(loc, id_localidad);
 						}
 						Domicilio dom = new Domicilio(id_domicilio,calle,nro,loc);
-						domicilios.add(dom);
+						domicilios.put(id_domicilio, dom);
 						
 					}
 				}catch(SQLException e) {
@@ -201,49 +201,69 @@ public class ControladoraPersistencia {
 	public void cargarPersona(Persona persona) throws SQLException {
 		try {
 		 st=con.createStatement();
-		 if(controlLogic.buscarEnDomicilios(persona.getDomicilio().getId_domicilio())==-1) {
+		 if(controlLogic.domiciliosContains(persona.getDomicilio().getId_domicilio())==false) {
 			 st.executeUpdate("INSERT INTO domicilio (id_domicilio,  calle, numero, id_localidad) VALUES('"+
 			 			persona.getDomicilio().getId_domicilio()+"', '"+persona.getDomicilio().getCalle()+
 			 			"', '"+persona.getDomicilio().getNumero()+"', '"+persona.getDomicilio().getLocalidad().getId_localidad()+"');");
-			 controlLogic.agregarADomicilios(persona.getDomicilio());
+			 controlLogic.agregarADomicilios(persona.getDomicilio(), persona.getDomicilio().getId_domicilio());
 		 }
 		 st.executeUpdate("INSERT INTO persona (id_persona, nombre, apellido, id_genero, id_domicilio) VALUES('"
 				 		+persona.getId_persona()+"', '"+persona.getNombre()+"', '"+persona.getApellido()+"', '"
 				 		+persona.getGenero().getId_genero()+"', '"+persona.getDomicilio().getId_domicilio()+"');");
-		 controlLogic.agregarAPersonas(persona);
+		 controlLogic.agregarAPersonas(persona, persona.getId_persona());
 		 System.out.println("PERSONA CARGADA!");
 		}catch(SQLException e) {
 			System.out.println("ERROR AL CARGAR PERSONA :(");
 			e.printStackTrace();
 		}
 	}
+	//CARGA DE LOCALIDAD
+	public void cargarLocalidad (Localidad localidad) throws SQLException{
+		try {
+			st.executeUpdate("INSERT INTO localidad (id_localidad, codigo_postal, descripcion) VALUES ('"+localidad.getId_localidad()
+			+"', '"+localidad.getCodigo_postal()+"', '"+localidad.getDescripcion()+"');");
+			controlLogic.agregarALocalidades(localidad, localidad.getId_localidad());
+			System.out.println("LOCALIDAD CARGADA!");
+		}catch(SQLException e){
+			System.out.println("ERROR AL CARGAR LOCALIDAD :(");
+			e.printStackTrace();
+		}
+	}
+	//CARGA DE GENERO
+	public void cargarGenero (Genero genero) throws SQLException{
+		try {
+			st.executeUpdate("INSERT INTO genero (id_genero, nombre, abreviatura) VALUES ('"+genero.getId_genero()
+			+"', '"+genero.getNombre()+"', '"+genero.getAbreviatura()+"');");
+			controlLogic.agregarAGeneros(genero, genero.getId_genero());
+			System.out.println("GENERO CARGADO!");
+		}catch(SQLException e){
+			System.out.println("ERROR AL CARGAR GENERO :(");
+			e.printStackTrace();
+		}
+	}
 	//EDITAR PERSONA:
 	public void editarPersona(Persona persona) {
 		try {
-			if (controlLogic.buscarEnDomicilios(persona.getDomicilio().getId_domicilio())==-1) {
+			if (controlLogic.domiciliosContains(persona.getDomicilio().getId_domicilio())==false) {
 				st.executeUpdate("INSERT INTO domicilio (id_domicilio,  calle, numero, id_localidad) VALUES('"+
 				 persona.getDomicilio().getId_domicilio()+"', '"+persona.getDomicilio().getCalle()+
 				 "', '"+persona.getDomicilio().getNumero()+"', '"+persona.getDomicilio().getLocalidad().getId_localidad()+"');");
-				controlLogic.agregarADomicilios(persona.getDomicilio());
+				controlLogic.agregarADomicilios(persona.getDomicilio(), persona.getDomicilio().getId_domicilio());
 				}
 				
 			st.executeUpdate("UPDATE persona SET nombre='"+ persona.getNombre() +
 					"', apellido='"+persona.getApellido()+"', id_genero= '"+persona.getGenero().getId_genero()+"', id_domicilio ='"+persona.getDomicilio().getId_domicilio()
 					+ "' WHERE id_persona = '" + persona.getId_persona() + "';");
-			int pos=controlLogic.buscarEnPersonas(persona.getId_persona());
+			//int pos=controlLogic.buscarEnPersonas(persona.getId_persona());
 			//System.out.println("***"+controlLogic.traerDePersonas(pos).getGenero().getNombre() +"***");
-			System.out.println("**********************");
+			/*System.out.println("**********************");
 			System.out.println("POSICION "+pos);
 			System.out.println("**********************");
 			System.out.println("ANTES DE ELIMINAR:");
-			System.out.println("**********************");
-			controlLogic.mostrarPersonasDet();
-			controlLogic.eliminarDePersonas(controlLogic.buscarEnPersonas(pos));
-			System.out.println("**********************");
-			System.out.println("DESPUES DE ELIMINAR");
-			System.out.println("**********************");
-			controlLogic.mostrarPersonasDet();;
-			controlLogic.agregarAPersonas(persona, pos);
+			System.out.println("**********************");*/
+			//controlLogic.mostrarPersonasDet();
+			controlLogic.eliminarDePersonas(persona.getId_persona());
+			controlLogic.agregarAPersonas(persona, persona.getId_persona());
 			System.out.println("PERSONA MODIFICADA CORRECTAMENTE!");
 		}catch (SQLException e)
 		{
@@ -254,21 +274,20 @@ public class ControladoraPersistencia {
 	//EDITAR DOMICILIO
 	public void editarDomicilio(Domicilio domicilio) {
 		try {
-			if (controlLogic.buscarEnDomicilios(domicilio.getId_domicilio())==-1) {
+			if (controlLogic.domiciliosContains(domicilio.getId_domicilio())==false) {
 				st.executeUpdate("INSERT INTO domicilio (id_domicilio,  calle, numero, id_localidad) VALUES('"+
 			 			domicilio.getId_domicilio()+"', '"+domicilio.getCalle()+
 			 			"', '"+domicilio.getNumero()+"', '"+domicilio.getLocalidad().getId_localidad()+"');");
-				controlLogic.agregarADomicilios(domicilio);
+				controlLogic.agregarADomicilios(domicilio, domicilio.getId_domicilio());
 			}
+			Domicilio domViej= controlLogic.traerDeDomicilios(domicilio.getId_domicilio());
+			Domicilio domNuev = domicilio;
+			domViej.setCalle(domNuev.getCalle());
+			domViej.setNumero(domNuev.getNumero());
+			domViej.setLocalidad(domNuev.getLocalidad());
 			st.executeUpdate("UPDATE domicilio SET calle='"+ domicilio.getCalle() +
 					"', numero='"+domicilio.getNumero()+"', id_localidad= '"+domicilio.getLocalidad().getId_localidad()
 					+ "' WHERE id_domicilio = '" + domicilio.getId_domicilio() + "';");
-			int pos=controlLogic.buscarEnDomicilios(domicilio.getId_domicilio());
-			//System.out.println("###POSICION"+ pos);
-			//System.out.println("###"+controlLogic.traerDeDomicilios(pos).getCalle()+" "+controlLogic.traerDeDomicilios(pos).getNumero());
-			controlLogic.eliminarDeDomicilios(controlLogic.traerDeDomicilios(controlLogic.buscarEnDomicilios(domicilio.getId_domicilio())));
-			//System.out.println("///"+domicilio.getCalle()+" "+domicilio.getNumero());
-			controlLogic.agregarADomicilios(domicilio, pos);
 			System.out.println("DOMICILIO MODIFICADO CORRECTAMENTE!");
 			
 		}catch(SQLException e) {
@@ -280,7 +299,7 @@ public class ControladoraPersistencia {
 	//BORRAR PERSONA MEDIANTE SU ID:
 	public void borrarPersona(int id){
 		try{
-			controlLogic.eliminarDePersonas(controlLogic.traerDePersonas(id));;
+			controlLogic.eliminarDePersonas(id);
 			Statement s2=con.createStatement();
 			s2.executeUpdate(
 
@@ -296,7 +315,7 @@ public class ControladoraPersistencia {
 	//BORRAR DOMICILIO MEDIANTE SU ID:
 	public void borrarDomicilio(int id){
 		try{
-			controlLogic.eliminarDeDomicilios(controlLogic.traerDeDomicilios(id));;
+			controlLogic.eliminarDeDomicilios(id);;
 			Statement s2=con.createStatement();
 			s2.executeUpdate(
 
